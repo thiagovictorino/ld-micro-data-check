@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>LD Micro – run.json data check</title>
+<style>body{font-family:system-ui,sans-serif;margin:24px;color:#222}table{border-collapse:collapse;font-size:13px}td,th{border:1px solid #ddd;padding:4px 8px;text-align:right}td:nth-child(2),th:nth-child(2){text-align:left}.g{display:flex;gap:40px;flex-wrap:wrap}.fail{background:#fde2e2}.zero{background:#fff6d6}h2{margin-top:28px}</style></head><body>
+<h1>LD Micro conference – raw data check</h1>
+<p>Snapshot of <a href="https://issuerdirect.github.io/conference-social-dashboard/run.json">run.json</a> (<a href="data.json">local copy</a>). <b id="gen"></b></p>
+<div class="g"><div><h2>Conference</h2><table id="conf"></table></div><div><h2>Platforms</h2><table id="plat"></table></div><div><h2>Sentiment (classified posts)</h2><table id="sent"></table></div></div>
+<h2>Companies (<span id="n"></span>)</h2><p>Red = collection failed; yellow = collected, zero mentions.</p><table id="co"></table>
+<script>
+fetch('data.json').then(r=>r.json()).then(d=>{
+const R=d.power_rankings,c=d.conference,$=i=>document.getElementById(i),row=a=>'<tr>'+a.map(x=>'<td>'+(x??'—')+'</td>').join('')+'</tr>';
+$('gen').textContent='Data generated at '+d.run.generated_at+' · window '+d.run.window.start+' → '+d.run.window.end;
+$('conf').innerHTML=Object.entries(c).map(([k,v])=>row(['',k,v].slice(1))).join('');
+const p={},s={positive:0,neutral:0,negative:0};R.forEach(r=>{Object.entries(r.platform_breakdown||{}).forEach(([k,v])=>p[k]=(p[k]||0)+v);Object.entries(r.sentiment_counts||{}).forEach(([k,v])=>s[k]+=v)});
+const tbl=(o)=>{const t=Object.values(o).reduce((a,b)=>a+b,0)||1;return '<tr><th>n</th><th>key</th><th>%</th></tr>'+Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<tr><td>'+v+'</td><td>'+k+'</td><td>'+(v/t*100).toFixed(1)+'</td></tr>').join('')};
+$('plat').innerHTML=tbl(p);$('sent').innerHTML=tbl(s);$('n').textContent=R.length;
+$('co').innerHTML='<tr><th>Rank</th><th>Company</th><th>Ticker</th><th>Score</th><th>Mentions</th><th>Engagement</th><th>Net sent.</th><th>Pos/Neu/Neg</th><th>Platforms</th></tr>'+R.map(r=>{const m=r.metrics||{},sc=r.sentiment_counts,f=r.flags;const cls=f.collection_failed?'fail':(f.no_conversation?'zero':'');
+return '<tr class="'+cls+'">'+[r.rank,r.company_name,r.ticker,r.power_score,m.mention_volume,m.total_engagement,m.net_sentiment,sc?sc.positive+'/'+sc.neutral+'/'+sc.negative:null,r.platform_breakdown?Object.entries(r.platform_breakdown).map(e=>e.join(':')).join(' '):(f.collection_failed?'FAILED':null)].map(x=>'<td>'+(x??'—')+'</td>').join('')+'</tr>'}).join('');
+});
+</script></body></html>
